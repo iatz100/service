@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sign In | Social Service</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+
+<style>
+  :root {
+    --primary-color: #4a6bff;
+    --secondary-color: #f5f7ff;
+    --white: #fff;
+    --error-color: #ff4d4d;
+    --text-color: #333;
+    --border-color: #ddd;
+    --background-color: var(--secondary-color);
+    --card-background: var(--white);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --secondary-color: #1a1a1a;
+      --white: #2d2d2d;
+      --text-color: #f0f0f0;
+      --border-color: #444;
+      --background-color: #121212;
+      --card-background: var(--white);
+    }
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  body {
+    background: var(--background-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  .auth-container {
+    width: 100%;
+    max-width: 400px;
+    background: var(--card-background);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: background 0.3s ease;
+  }
+  .auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .auth-header h1 {
+    color: var(--text-color);
+  }
+  .auth-header p {
+    color: var(--text-color);
+    opacity: 0.8;
+  }
+  .form-group {
+    position: relative;
+    margin-bottom: 35px;
+  }
+  .form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    transition: 0.3s;
+    background-color: var(--card-background);
+    color: var(--text-color);
+  }
+  .floating-label {
+    position: absolute;
+    left: 15px;
+    top: 12px;
+    color: #999;
+    font-size: 16px;
+    pointer-events: none;
+    transition: 0.3s ease;
+    background: var(--card-background);
+    padding: 0 5px;
+  }
+  .form-control:focus + .floating-label,
+  .form-control:not(:placeholder-shown) + .floating-label {
+    top: -10px;
+    left: 10px;
+    font-size: 12px;
+    color: var(--primary-color);
+  }
+  .form-control:focus {
+    border-color: var(--primary-color);
+  }
+  /* Error State */
+  .form-group.error .form-control {
+    border-color: var(--error-color);
+  }
+  /* Error icon */
+  .error-icon {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    background: var(--error-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.3s;
+  }
+  .form-group.error .error-icon {
+    opacity: 1;
+  }
+  /* Tooltip (red text) */
+  .tooltip {
+    position: absolute;
+    top: 50%;
+    right: 40px;
+    transform: translateY(-50%) translateX(20px);
+    color: var(--error-color);
+    font-size: 14px;
+    font-weight: bold;
+    white-space: nowrap;
+    opacity: 0;
+    transition: 0.3s ease;
+  }
+  .form-group.error .tooltip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: opacity 0.3s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .auth-footer {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+    color: var(--text-color);
+  }
+  .auth-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: bold;
+  }
+  .auth-footer a:hover {
+    text-decoration: underline;
+  }
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+  }
+  .toast.show {
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-header">
+      <h1>Sign In</h1>
+      <p>Welcome back! Please login to continue.</p>
+    </div>
+
+    <form id="signin-form" novalidate>
+      <div class="form-group">
+        <input type="email" id="email" class="form-control" placeholder=" " />
+        <label for="email" class="floating-label">Email Address</label>
+        <div class="error-icon">!</div>
+        <div class="tooltip">Email is required</div>
+      </div>
+
+      <div class="form-group">
+        <input type="password" id="password" class="form-control" placeholder=" " />
+        <label for="password" class="floating-label">Password</label>
+        <div class="error-icon">!</div>
+        <div class="tooltip">Password is required</div>
+      </div>
+
+      <button type="submit" class="btn">Sign In</button>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="signup.html">Create Account</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // Firebase config (same as signup page)
+  const firebaseConfig = {
+    apiKey: "AIzaSyCEn86IfdTNcvEmQuNP-KCvrmMABagcdkc",
+    authDomain: "web-iatz.firebaseapp.com",
+    projectId: "web-iatz",
+    storageBucket: "web-iatz.firebasestorage.app",
+    messagingSenderId: "264921056318",
+    appId: "1:264921056318:web:c77e93fad660665bdfbd6f"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  const form = document.getElementById('signin-form');
+  const inputs = form.querySelectorAll('.form-control');
+  const toast = document.getElementById('toast');
+
+  function showToast(message, isSuccess = true) {
+    toast.textContent = message;
+    toast.style.backgroundColor = isSuccess ? '#4CAF50' : '#f44336';
+    toast.classList.add('show');
+
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    // Clear errors
+    inputs.forEach(input => input.parentElement.classList.remove('error'));
+
+    let firstInvalid = null;
+
+    for (let input of inputs) {
+      if (!input.value.trim()) {
+        input.parentElement.classList.add('error');
+        if (!firstInvalid) firstInvalid = input;
+      }
+    }
+    if (firstInvalid) {
+      firstInvalid.focus();
+      return;
+    }
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then(userCredential => {
+        showToast('Signed in successfully! Redirecting...');
+        setTimeout(() => {
+          window.location.href = 'index.html'; // Redirect after login
+        }, 1500);
+      })
+      .catch(error => {
+        let errorMessage = "Sign in failed. Please check your credentials.";
+        if (error.code === 'auth/user-not-found') {
+          errorMessage = "User not found.";
+          document.getElementById('email').parentElement.classList.add('error');
+          document.getElementById('email').parentElement.querySelector('.tooltip').textContent = errorMessage;
+          document.getElementById('email').focus();
+        } else if (error.code === 'auth/wrong-password') {
+          errorMessage = "Incorrect password.";
+          document.getElementById('password').parentElement.classList.add('error');
+          document.getElementById('password').parentElement.querySelector('.tooltip').textContent = errorMessage;
+          document.getElementById('password').focus();
+        } else if (error.code === 'auth/invalid-email') {
+          errorMessage = "Invalid email address.";
+          document.getElementById('email').parentElement.classList.add('error');
+          document.getElementById('email').parentElement.querySelector('.tooltip').textContent = errorMessage;
+          document.getElementById('email').focus();
+        }
+        showToast(errorMessage, false);
+      });
+  });
+
+  // Remove error on input
+  inputs.forEach(input => {
+    input.addEventListener('input', () => {
+      if (input.value.trim()) {
+        input.parentElement.classList.remove('error');
+      }
+    });
+  });
+</script>
+</body>
+</html>
